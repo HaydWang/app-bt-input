@@ -163,7 +163,7 @@ dotnet publish -c Release -r win-x64 --self-contained -p:PublishSingleFile=true
 
 ## 许可证
 
-待定
+MIT License
 
 ## 贡献
 
