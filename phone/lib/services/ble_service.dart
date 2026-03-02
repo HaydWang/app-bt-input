@@ -1,11 +1,21 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'dart:typed_data';
+
+import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 
 import '../core/protocol.dart';
 import '../models/text_delta.dart';
 import '../utils/constants.dart';
 import '../utils/logger.dart';
+
+/// iOS BLE 兼容性说明：
+/// 1) iOS 不允许应用主动开启蓝牙，系统会在首次访问蓝牙能力时弹出授权对话框。
+/// 2) iOS 实际可用 MTU 常见上限约为 185 字节，本实现会在分包前进行上限保护。
+/// 3) iOS 后台 BLE 能力受系统策略限制，需要在 Info.plist 配置 bluetooth-central/
+///    bluetooth-peripheral Background Modes；即使如此，后台长时间传输仍可能被系统挂起。
+/// 4) 当蓝牙被拒绝或受限时，应用记录日志并保持可恢复状态，由 UI 引导用户到系统设置授权。
 
 enum ControlCommand {
   activate,
@@ -33,6 +43,8 @@ class BleService {
 
   Future<void> initializeAsync() async {
     Logger.debug('BleService.initializeAsync');
+
+    await _prepareIosBleEnvironmentAsync();
 
     // flutter_blue_plus 在多数平台上主要提供 Central API。
     // 若 GATT Server（Peripheral）API 不可用，则采用回退策略：
@@ -116,6 +128,35 @@ class BleService {
     Logger.debug('Initializing BLE in central fallback mode');
   }
 
+  Future<void> _prepareIosBleEnvironmentAsync() async {
+    if (!Platform.isIOS) {
+      return;
+    }
+
+    try {
+      final isSupported = await FlutterBluePlus.isSupported;
+      if (!isSupported) {
+        Logger.debug('iOS BLE not supported on this device');
+        return;
+      }
+
+      final adapterState = await FlutterBluePlus.adapterState
+          .where((state) => state != BluetoothAdapterState.unknown)
+          .first
+          .timeout(const Duration(seconds: 3), onTimeout: () => BluetoothAdapterState.unknown);
+
+      if (adapterState == BluetoothAdapterState.unauthorized) {
+        Logger.debug('iOS Bluetooth permission unauthorized, please grant permission in Settings');
+      } else if (adapterState == BluetoothAdapterState.off) {
+        Logger.debug('iOS Bluetooth is off, waiting for user to enable it in system settings');
+      } else {
+        Logger.debug('iOS Bluetooth adapter state: $adapterState');
+      }
+    } catch (error) {
+      Logger.debug('iOS BLE environment preparation failed: $error');
+    }
+  }
+
   Future<void> _negotiateMtuAsync() async {
     final dynamic device = _connectedDevice;
     if (device == null) {
@@ -123,11 +164,11 @@ class BleService {
     }
     try {
       final int mtu = await device.requestMtu(512) as int;
-      _negotiatedMtu = mtu;
+      _negotiatedMtu = Platform.isIOS ? (mtu > 185 ? 185 : mtu) : mtu;
       Logger.debug('Negotiated MTU: $_negotiatedMtu');
     } catch (_) {
-      _negotiatedMtu = 23;
-      Logger.debug('MTU negotiation failed, fallback to default 23');
+      _negotiatedMtu = Platform.isIOS ? 185 : 23;
+      Logger.debug('MTU negotiation failed, fallback to $_negotiatedMtu');
     }
   }
 
