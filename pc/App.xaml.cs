@@ -14,6 +14,7 @@ public partial class App : System.Windows.Application
     private BleManager? _bleManager;
     private ProtocolDecoder? _protocolDecoder;
     private TextInjector? _textInjector;
+    private FloatingBar? _floatingBar;
     private bool _isActivated;
 
     protected override void OnStartup(StartupEventArgs e)
@@ -34,6 +35,8 @@ public partial class App : System.Windows.Application
         _bleManager = new BleManager();
         _bleManager.TextDataReceived += OnTextDataReceived;
         _bleManager.ConnectionChanged += OnConnectionChanged;
+
+        _floatingBar = new FloatingBar();
     }
 
     private async void OnConnectionChanged(bool connected)
@@ -41,6 +44,7 @@ public partial class App : System.Windows.Application
         if (connected)
         {
             _trayManager?.UpdateState(_isActivated ? TrayState.Active : TrayState.Connected, deviceName: _bleManager?.ConnectedDeviceName, activated: _isActivated);
+            _floatingBar?.UpdateStatus(FloatingConnectionStatus.Connected);
             if (_bleManager is not null)
             {
                 await _bleManager.SendControlAsync(Encoding.UTF8.GetBytes("{\"t\":129}"));
@@ -49,6 +53,7 @@ public partial class App : System.Windows.Application
         else
         {
             _trayManager?.UpdateState(TrayState.Disconnected);
+            _floatingBar?.UpdateStatus(FloatingConnectionStatus.Disconnected);
         }
     }
 
@@ -64,6 +69,8 @@ public partial class App : System.Windows.Application
         {
             _textInjector.HandleDelta(textDeltaMessage);
             _trayManager?.UpdateState(TrayState.Active, deviceName: _bleManager.ConnectedDeviceName, activated: true);
+            _floatingBar?.SetInputActive(true);
+            _floatingBar?.UpdateInterimText(textDeltaMessage.Text);
         }
 
         if (_protocolDecoder.SequenceGapDetected)
@@ -77,6 +84,15 @@ public partial class App : System.Windows.Application
         _isActivated = !_isActivated;
         var trayState = _isActivated ? TrayState.Active : TrayState.Connected;
         _trayManager?.UpdateState(trayState, deviceName: "示例设备", activated: _isActivated);
+
+        if (_isActivated)
+        {
+            _floatingBar?.ShowWithFade();
+        }
+        else
+        {
+            _floatingBar?.HideWithFade();
+        }
 
         if (_bleManager is not null)
         {
@@ -93,6 +109,7 @@ public partial class App : System.Windows.Application
         {
             _ = _bleManager.DisposeAsync();
         }
+        _floatingBar?.Close();
         base.OnExit(e);
     }
 }
