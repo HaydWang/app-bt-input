@@ -7,6 +7,13 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
     <UseWindowsForms>true</UseWindowsForms>
+    <Product>BT Input</Product>
+    <Company>BT Input Team</Company>
+    <Version>1.0.18</Version>
+    <AssemblyVersion>1.0.18.0</AssemblyVersion>
+    <FileVersion>1.0.18.0</FileVersion>
+    <AssemblyTitle>BT Input</AssemblyTitle>
+    <ApplicationIcon>assets\icons\tray-blue.ico</ApplicationIcon>
   </PropertyGroup>
 
   <ItemGroup>

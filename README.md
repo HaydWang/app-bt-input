@@ -1,170 +1,76 @@
 # BT Input
 
-将智能手机变成 Windows PC 的无线输入设备，通过蓝牙低功耗 (BLE) 实现实时文字输入。
+BT Input 是一个把手机变成 Windows 蓝牙输入设备的工具。用户在手机上使用任意系统输入法输入文字，文本会通过 BLE 实时注入到 PC 当前光标位置。
 
-## 项目概述
+## What is BT Input
 
-用户在手机上使用**任何系统输入法**（拼音、语音、手写、Gboard 等）输入文字，文字实时出现在 PC 光标位置。无需 WiFi，无需互联网，仅通过 BLE 直连。
+- 手机端：Flutter 应用，负责采集输入和 BLE 发送
+- PC 端：WPF 应用，负责 BLE 接收、协议解码和文本注入
+- 传输方式：BLE GATT，离线直连，不依赖 Wi-Fi 或互联网
 
-**技术栈:**
+## System Requirements
 
-- **手机端**: Flutter 3.x / Dart (BLE Peripheral)
-- **PC 端**: C# WPF / .NET 8 (BLE Central)
-- **通信协议**: JSON over BLE GATT
+### PC
 
-## 快速开始
+- Windows 10/11（支持 BLE）
+- Bluetooth 已开启
+- 安装 VC 运行时（如目标机器缺少 .NET 运行所需组件）
 
-### 初始化项目
+### Phone
 
-```bash
-cd bt-input
-claude
-```
+- Android 8.0+
+- 蓝牙权限已授权
+- 蓝牙已开启
 
-### 开发工作流
+## Installation
 
-#### 手机端开发
+### 安装 PC 端
 
-```bash
-# 创建 Flutter 项目骨架
-> /phone create the Flutter project skeleton with directory structure,
->   pubspec.yaml with flutter_blue_plus, and placeholder files
+1. 下载发布包中的 `BtInput.exe`。
+2. 双击运行，确认系统托盘出现 BT Input 图标。
+3. 首次运行根据提示开启蓝牙与相关权限。
 
-# 实现核心算法
-> /phone implement DiffEngine with all 7 scenarios and unit tests
+### 安装手机端
 
-# 实现节流发送器
-> /phone implement ThrottledDiffSender with 50ms throttle window
-```
+1. 安装发布的 Android APK。
+2. 打开应用并授予蓝牙权限。
+3. 在连接页选择目标 PC 设备。
 
-#### PC 端开发
+## Usage Guide
 
-```bash
-# 创建 WPF 项目
-> /pc create WPF project with system tray, hotkey Ctrl+Shift+B, and app skeleton
+1. 先在 PC 端启动 BT Input（托盘图标出现）。
+2. 手机打开 BT Input，进入连接页并连接到目标电脑。
+3. 进入输入页后，在文本框中输入内容。
+4. 文本将实时出现在 PC 当前焦点输入框。
+5. 使用 `Ctrl+Shift+B` 可在 PC 端切换激活/暂停输入。
 
-# 实现 BLE Central
-> /pc implement BleManager with scan, connect, and auto-reconnect
+## Screenshots
 
-# 实现文本注入
-> /pc implement TextInjector with SendInput and clipboard injection
-```
+- 手机连接页：`docs/screenshots/phone-connection.png`（待补）
+- 手机输入页：`docs/screenshots/phone-input.png`（待补）
+- PC 托盘/浮动条：`docs/screenshots/pc-floating-bar.png`（待补）
 
-#### 验证与测试
+## Troubleshooting FAQ
 
-```bash
-# 验证协议实现
-> /test-protocol all
+### 手机搜不到电脑怎么办？
 
-# 端到端集成测试
-> /e2e basic text input
-```
+- 确认 PC 端程序已启动且蓝牙开启。
+- 关闭并重开手机蓝牙后下拉刷新设备列表。
+- 电脑蓝牙适配器异常时，重启蓝牙服务或重启电脑。
 
-#### 会话管理
+### 连接后无法输入到目标应用？
 
-```bash
-# 会话结束前保存进度
-> /handoff
+- 确认目标应用窗口已聚焦。
+- 确认 PC 端未被热键切换到暂停状态。
+- 对部分高权限窗口，尝试以管理员身份运行 PC 端。
 
-# 下次开始时恢复上下文
-> /catchup
-```
+### 输入延迟或丢字怎么办？
 
-## 项目结构
+- 减少与电脑间遮挡，缩短距离。
+- 关闭高干扰蓝牙设备后重试。
+- 断开重连，等待自动同步完成。
 
-```
-bt-input/
-├── phone/                  # Flutter 手机端
-│   ├── lib/
-│   │   ├── core/          # DiffEngine, ThrottledDiffSender, Protocol
-│   │   ├── services/      # BLE Service, ConnectionManager
-│   │   ├── pages/         # UI 页面
-│   │   ├── models/        # 数据模型
-│   │   └── utils/         # 常量、日志
-│   └── test/              # 单元测试
-├── pc/                     # C# WPF PC 端
-│   ├── src/
-│   │   ├── Core/          # BleManager, TextInjector, ProtocolDecoder
-│   │   ├── UI/            # FloatingBar, TrayManager
-│   │   ├── Protocol/      # 消息定义
-│   │   └── Helpers/       # P/Invoke, 热键管理
-│   └── tests/             # 单元测试
-├── docs/                   # 详细文档
-│   ├── PRD.md             # 产品需求
-│   ├── ARCHITECTURE.md    # 系统架构
-│   ├── PROTOCOL.md        # BLE 协议规范
-│   └── LOW_LEVEL_DESIGN.md # 底层实现细节
-├── .claude/commands/       # Claude 开发命令
-└── CLAUDE.md              # 项目总览和开发指南
+### 手机端提示权限问题怎么办？
 
-```
-
-## 构建和运行
-
-### 手机端 (Flutter)
-
-```bash
-cd phone
-flutter pub get
-flutter run                # 运行在连接的设备/模拟器
-flutter test               # 运行单元测试
-flutter analyze            # 静态分析
-dart format lib/ test/     # 格式化代码
-flutter build apk          # 构建 Android release
-flutter build ios          # 构建 iOS (需要 macOS)
-```
-
-### PC 端 (C# WPF .NET 8)
-
-```bash
-cd pc
-dotnet restore
-dotnet build
-dotnet run                 # 运行应用
-dotnet test                # 运行单元测试
-dotnet format              # 格式化代码
-dotnet publish -c Release -r win-x64 --self-contained -p:PublishSingleFile=true
-```
-
-## 核心特性
-
-- ✅ **BLE 直连**: 完全离线，无需 WiFi 或互联网
-- ✅ **系统 IME 支持**: 支持任何手机输入法（拼音、语音、手写等）
-- ✅ **智能差分算法**: O(N) 前缀+后缀匹配，覆盖 95%+ 真实输入场景
-- ✅ **50ms 节流**: 优化传输效率，批量发送变更
-- ✅ **大文本支持**: 自动使用剪贴板注入 >10 字符的文本
-- ✅ **自动清空**: 手机输入框 500 字符+2 秒空闲后自动清空
-- ✅ **自动重连**: 断线后指数退避重连（1/2/4/8/16 秒）
-- ✅ **浮动状态栏**: WPF 透明窗口，不抢占焦点
-- ✅ **全局热键**: Ctrl+Shift+B 激活/停用
-
-## 文档
-
-- **[CLAUDE.md](CLAUDE.md)**: 项目总览、架构、协议速查、开发规范
-- **[.github/copilot-instructions.md](.github/copilot-instructions.md)**: GitHub Copilot AI 代理指导
-- **详细文档** (待创建):
-  - `docs/PRD.md` - 产品需求和 UI/UX 规范
-  - `docs/ARCHITECTURE.md` - 系统架构和组件交互
-  - `docs/PROTOCOL.md` - BLE GATT 协议完整规范
-  - `docs/LOW_LEVEL_DESIGN.md` - DiffEngine、TextInjector 等核心算法
-
-## MVP 开发阶段
-
-1. ✅ Flutter 项目骨架 + BLE 服务桩
-2. ⬜ DiffEngine + 单元测试（全部 7 种场景）
-3. ⬜ ThrottledDiffSender + 协议编码器
-4. ⬜ 手机端 UI: ConnectionPage、InputPage、SettingsPage
-5. ⬜ C# WPF 项目骨架 + 系统托盘 + 热键
-6. ⬜ PC BLE Central（扫描、连接、订阅、自动重连）
-7. ⬜ PC TextInjector（SendInput + 剪贴板注入）
-8. ⬜ PC FloatingBar（WPF 透明窗口、光标跟踪）
-9. ⬜ PC 协议解码器 + 消息分发
-10. ⬜ 端到端集成测试
-
-## 许可证
-
-MIT License
-
-## 贡献
-
-待定
+- 进入系统设置，手动授予蓝牙与附近设备权限。
+- iOS/Android 均需允许蓝牙访问后才能正常连接。
