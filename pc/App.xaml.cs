@@ -16,6 +16,9 @@ public partial class App : System.Windows.Application
     private TextInjector? _textInjector;
     private FloatingBar? _floatingBar;
     private readonly Queue<TextDeltaMessage> _bufferedDeltas = new();
+    private AppSettingsStore? _settingsStore;
+    private AppSettings _settings = AppSettings.Default;
+    private FirstRunWindow? _firstRunWindow;
     private bool _isActivated;
     private bool _isReconnecting;
     private bool _awaitingFullSync;
@@ -23,6 +26,9 @@ public partial class App : System.Windows.Application
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
+
+        _settingsStore = new AppSettingsStore();
+        _settings = _settingsStore.Load();
 
         _trayManager = new TrayManager();
         _trayManager.ExitRequested += (_, _) => Shutdown();
@@ -40,10 +46,28 @@ public partial class App : System.Windows.Application
         _bleManager.ConnectionChanged += OnConnectionChanged;
 
         _floatingBar = new FloatingBar();
+
+        if (!_settings.FirstRunCompleted)
+        {
+            _firstRunWindow = new FirstRunWindow();
+            _firstRunWindow.SetPcDeviceName(Environment.MachineName);
+            _firstRunWindow.Show();
+        }
     }
 
     private async void OnConnectionChanged(bool connected)
     {
+        if (connected && !_settings.FirstRunCompleted && _settingsStore is not null)
+        {
+            _settings = _settings with { FirstRunCompleted = true };
+            _settingsStore.Save(_settings);
+            await Dispatcher.InvokeAsync(() =>
+            {
+                _firstRunWindow?.Close();
+                _firstRunWindow = null;
+            });
+        }
+
         if (connected)
         {
             _awaitingFullSync = true;
